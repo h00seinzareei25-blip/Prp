@@ -1,0 +1,57 @@
+{
+  "name": "prp-clinic-manager-desktop",
+  "version": "1.0.0",
+  "description": "Desktop shell for the PRP clinic management application with an external JSON database",
+  "private": true,
+  "main": "src/main.js",
+  "scripts": {
+    "sync": "node scripts/sync-app.js",
+    "prestart": "npm run sync",
+    "start": "electron .",
+    "pretest": "npm run sync",
+    "test": "node scripts/smoke-test.js",
+    "prebuild:win": "npm run sync",
+    "build:win": "electron-builder --win",
+    "prebuild:win-portable": "npm run sync",
+    "build:win-portable": "electron-builder --win portable",
+    "prebuild:linux": "npm run sync",
+    "build:linux": "electron-builder --linux"
+  },
+  "devDependencies": {
+    "electron": "^43.2.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.prp.clinic.manager",
+    "productName": "PRP-Clinic-Manager",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "app/index.html",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        { "target": "portable", "arch": ["x64"] },
+        { "target": "nsis", "arch": ["x64"] }
+      ]
+    },
+    "portable": {
+      "artifactName": "PRP-Portable-${version}.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "artifactName": "PRP-Setup-${version}.exe"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "category": "Office"
+    }
+  }
+}
