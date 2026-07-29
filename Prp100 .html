@@ -2673,9 +2673,9 @@ function getNextCycleNoForPerson(nidNorm, phoneNorm){
                     }catch(e){}
                     if(hintText){
                         hintText.innerHTML =
-                            `این ${dup.by} قبلاً ثبت شده است (<b>${(p.fullName||'')}</b>، تاریخ ثبت: <b>${regJ}</b>). ` +
+                            `این ${prpEscapeHtml(dup.by)} قبلاً ثبت شده است (<b>${prpEscapeHtml(p.fullName||'')}</b>، تاریخ ثبت: <b>${prpEscapeHtml(regJ)}</b>). ` +
                             `برای ادامه، پرونده را باز کنید. اگر برای همین بیمار «سیکل جدید درمان» می‌خواهید، دکمه «ثبت» را بزنید.` +
-                            ` <button type="button" onclick="closeModal('addModal'); editPatient('${p.id}')" class="mr-2 px-2 py-1 rounded-lg bg-white border border-red-200 hover:bg-red-100 font-bold">باز کردن پرونده</button>`;
+                            ` <button type="button" onclick="closeModal('addModal'); editPatient(${prpInlineJsArg(p.id)})" class="mr-2 px-2 py-1 rounded-lg bg-white border border-red-200 hover:bg-red-100 font-bold">باز کردن پرونده</button>`;
                     }
                 }
                 // اگر کدملی پر شده، روی همان فیلد هشدار بده؛ وگرنه روی موبایل
@@ -3827,16 +3827,16 @@ function renderDailyAppointments(dayJ){
             var badges = _dailyApptBadgeHTML(p);
             return `
             <div class="da-item p-2 rounded-xl border border-gray-100 hover:bg-slate-50 transition cursor-pointer"
-                 onclick="try{ closeModal('statsModal'); setTimeout(function(){ editPatient('${p.id}'); }, 60); }catch(e){}">
+                 onclick="try{ closeModal('statsModal'); setTimeout(function(){ editPatient(${prpInlineJsArg(p.id)}); }, 60); }catch(e){}">
                 <div class="flex items-start justify-between gap-2">
                     <div class="min-w-0">
-                        <div class="text-sm font-black text-gray-800">${p.fullName || '—'}</div>
+                        <div class="text-sm font-black text-gray-800">${prpEscapeHtml(p.fullName || '—')}</div>
                         <div class="text-[11px] text-gray-500 font-bold mt-0.5">
-                            ${stageLabel} • موبایل: ${phone} • کدملی: ${nid}
+                            ${prpEscapeHtml(stageLabel)} • موبایل: ${prpEscapeHtml(phone)} • کدملی: ${prpEscapeHtml(nid)}
                         </div>
                         ${badges ? `<div class="mt-1">${badges}</div>` : ''}
                     </div>
-                    <div class="text-[11px] font-black text-gray-400 whitespace-nowrap">${statusLabel}</div>
+                    <div class="text-[11px] font-black text-gray-400 whitespace-nowrap">${prpEscapeHtml(statusLabel)}</div>
                 </div>
             </div>`;
         }
@@ -3975,10 +3975,17 @@ function initDailyHistoryUI(){
 
 async function clearDailyHistory(){
     if(!confirm('حذف تاریخچه عملکرد روزانه؟')) return;
-    dailyLog = [];
-    try{ await idbSet(DAILY_LOG_KEY, dailyLog); }catch(e){}
-    try{ renderDailyHistory(document.getElementById('dailyHistoryDate') ? document.getElementById('dailyHistoryDate').value : ''); }catch(e){}
-    try{ showToast('پاک شد'); }catch(e){}
+    var previousLog = dailyLog;
+    try{
+        dailyLog = [];
+        await idbSet(DAILY_LOG_KEY, dailyLog);
+        try{ renderDailyHistory(document.getElementById('dailyHistoryDate') ? document.getElementById('dailyHistoryDate').value : ''); }catch(e){}
+        try{ showToast('پاک شد'); }catch(e){}
+    }catch(e){
+        dailyLog = previousLog;
+        console.error('Failed to clear daily history', e);
+        try{ showMsg('خطا','پاک‌سازی تاریخچه ذخیره نشد؛ اطلاعات قبلی حفظ شد.'); }catch(_e){}
+    }
 }
 
 // --- یادداشت اختیاری برای اقدامات داخل مودال نتیجه تماس (تاخیر تماس / تعویق نوبت) ---
@@ -6738,6 +6745,7 @@ function saveNewPatient(e) {
                     isVip: document.getElementById('addVip').checked,
                     isWaitlist: document.getElementById('addEmptySlot') ? document.getElementById('addEmptySlot').checked : false,
                     regDate: regObj.toISOString(), // مرحله ۱: تاریخ ثبت؛ مراحل بعد: تاریخ آخرین تزریق
+                    createdAt: nowISO,
                     lastInjectionDate: stage > 1 ? normalizeJalaliDateKey(jDate) : '',
                     lastInjectionStage: stage > 1 ? (stage - 1) : 0,
                     currentStage: stage,
@@ -10639,7 +10647,7 @@ if(currentTab === 'confirmedList' || currentTab === 'callList' || currentTab ===
             if(__rowVF.hasDoctorLetter) badges += '<span class="bg-indigo-100 text-indigo-700 text-[12px] w-6 h-6 rounded-full ml-2 font-bold border border-purple-200 inline-flex items-center justify-center" title="نامه پزشک همین نوبت" aria-label="نامه پزشک همین نوبت">📄</span>';
                         if(p.isWaitlist) badges += '<span class="bg-green-100 text-green-700 text-[12px] w-6 h-6 rounded-full ml-2 font-bold border border-green-200 inline-flex items-center justify-center" title="لیست انتظار (تماس در صورت نوبت خالی)" aria-label="لیست انتظار (تماس در صورت نوبت خالی)">⏳</span>';
 try{ badges += prpSiblingCaseBadgeHtml(p, 'row'); }catch(e){}
-if(p.absentCount > 0) badges += `<span class="bg-rose-100 text-rose-700 text-[10px] px-2 py-0.5 rounded-full ml-2 font-bold border border-rose-200">${p.absentCount} غیبت</span>`;
+if(p.absentCount > 0) badges += `<span class="bg-rose-100 text-rose-700 text-[10px] px-2 py-0.5 rounded-full ml-2 font-bold border border-rose-200">${prpEscapeHtml(p.absentCount)} غیبت</span>`;
 var _smsLblMap = {NO_ANSWER:'پاسخ نداد', BUSY:'مشغول', OUT_OF_REACH:'خاموش'};
 if(p.lastUnreachableSmsAt){ var _smsLbl = _smsLblMap[p.lastUnreachableSmsType]||'عدم دسترسی'; badges += `<span class="bg-violet-100 text-violet-700 text-[10px] px-2 py-0.5 rounded-full ml-2 font-bold border border-violet-200" title="پیامک ارسال شد — علت: ${_smsLbl}">📩 ${_smsLbl}</span>`; }
 
@@ -10753,7 +10761,7 @@ if(p.lastUnreachableSmsAt){ var _smsLbl = _smsLblMap[p.lastUnreachableSmsType]||
                             : 'bg-rose-50 text-rose-700 border-rose-200';
                         var __outcomeIcon = __isInj ? '💉' : '❌';
                         btns = `<div class="flex flex-col items-center justify-center gap-1.5 w-full">
-                            <div class="px-3 py-2 rounded-xl border text-xs font-black ${__outcomeCls}">${__outcomeIcon} ${p.__confirmedOutcome}<div class="mt-1 text-[10px] opacity-80">تاریخ مراجعه: ${toPersianDigits(__visitJ||'—')}</div></div>
+                            <div class="px-3 py-2 rounded-xl border text-xs font-black ${__outcomeCls}">${__outcomeIcon} ${prpEscapeHtml(p.__confirmedOutcome)}<div class="mt-1 text-[10px] opacity-80">تاریخ مراجعه: ${prpEscapeHtml(toPersianDigits(__visitJ||'—'))}</div></div>
                             <div class="flex items-center justify-center gap-1 flex-wrap w-full">
                                 <button class="glass-icon-btn confirmed-aux-btn" onclick="showHistory(${patientIdArg})" title="مشاهده سوابق" aria-label="مشاهده سوابق">📜</button>
                                 <button class="glass-icon-btn confirmed-aux-btn" onclick="editPatient(${patientIdArg})" title="ویرایش پرونده" aria-label="ویرایش پرونده">✏️</button>
@@ -13850,6 +13858,7 @@ function importPatientsFromRows(rows, sourceLabel){
             isFree: !!isFree,
             hasDoctorLetter: !!hasDoctorLetter,
             regDate: regG.toISOString(),
+            createdAt: new Date().toISOString(),
             currentStage: stage,
             nextAppointment: apG.toISOString(),
             status: status,
@@ -20484,9 +20493,15 @@ window.PRP_DAILY_QUOTA_MODEL = {version:'v92', total:'dynamic', activeRatio:25, 
     catch(e){return '';}
   }
   function persistCleanDates(){
-    try{ if(typeof idbSet === 'function') idbSet('prp_settings_dates_v2', activeDates); }catch(e){}
-    try{ if(typeof idbSet === 'function') idbSet('prp_settings_caps_v1', activeCaps); }catch(e){}
-    try{ if(typeof idbSet === 'function') idbSet(SETTINGS_LOCKS_KEY, lockedDates); }catch(e){}
+    try{
+      if(typeof idbSet === 'function'){
+        Promise.all([
+          idbSet('prp_settings_dates_v2', activeDates),
+          idbSet('prp_settings_caps_v1', activeCaps),
+          idbSet(SETTINGS_LOCKS_KEY, lockedDates)
+        ]).catch(function(e){ console.error('Failed to persist normalized active dates', e); });
+      }
+    }catch(e){ console.error('Failed to persist normalized active dates', e); }
     try{ localStorage.setItem('prp_settings_dates_v2', JSON.stringify(activeDates)); }catch(e){}
     try{ localStorage.setItem('prp_settings_caps_v1', JSON.stringify(activeCaps)); }catch(e){}
     try{ localStorage.setItem(SETTINGS_LOCKS_KEY, JSON.stringify(lockedDates)); }catch(e){}
@@ -26637,7 +26652,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   window.prpGetCompletedHistoryDates=completedHistoryDates;
 
   function persistLocks(){
-    try{if(typeof idbSet==='function'&&typeof SETTINGS_LOCKS_KEY!=='undefined')idbSet(SETTINGS_LOCKS_KEY,lockedDates);}catch(e){}
+    try{if(typeof idbSet==='function'&&typeof SETTINGS_LOCKS_KEY!=='undefined')Promise.resolve(idbSet(SETTINGS_LOCKS_KEY,lockedDates)).catch(function(e){console.error('Failed to persist completed-day locks',e);});}catch(e){console.error('Failed to persist completed-day locks',e);}
   }
 
   // جایگزین منطق قدیمی: تاریخ حذف نشود؛ روز پایان‌یافته قفل و تاریخی بماند.
@@ -27991,7 +28006,7 @@ window.__PRP_V139_CONFIRMED_VISIT_IMMUTABLE__ = true;
       if(!Array.isArray(window.lockedDates)) window.lockedDates = [];
       if(window.lockedDates.indexOf(d) === -1) window.lockedDates.push(d);
       try{ if(typeof lockedDates !== 'undefined' && Array.isArray(lockedDates) && lockedDates.indexOf(d) === -1) lockedDates.push(d); }catch(e){}
-      try{ if(typeof idbSet === 'function' && typeof SETTINGS_LOCKS_KEY !== 'undefined') idbSet(SETTINGS_LOCKS_KEY, window.lockedDates); }catch(e){}
+      try{ if(typeof idbSet === 'function' && typeof SETTINGS_LOCKS_KEY !== 'undefined') Promise.resolve(idbSet(SETTINGS_LOCKS_KEY, window.lockedDates)).catch(function(e){ console.error('Failed to persist confirmed-day lock', e); }); }catch(e){ console.error('Failed to persist confirmed-day lock', e); }
       try{ if(typeof SETTINGS_LOCKS_KEY !== 'undefined') localStorage.setItem(SETTINGS_LOCKS_KEY, JSON.stringify(window.lockedDates)); }catch(e){}
       ['renderDateButtons','updateSidebarDates','renderVisitDateButtons','renderEditVisitDateButtons'].forEach(function(n){
         try{ if(typeof window[n] === 'function') window[n](); }catch(e){}
