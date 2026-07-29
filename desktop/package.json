@@ -2,6 +2,7 @@
   "name": "prp-clinic-manager-desktop",
   "version": "1.0.0",
   "description": "Desktop shell for the PRP clinic management application with an external JSON database",
+  "author": "PRP Clinic",
   "private": true,
   "main": "src/main.js",
   "scripts": {
