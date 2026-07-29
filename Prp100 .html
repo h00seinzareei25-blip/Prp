@@ -2938,7 +2938,16 @@ var DB_KEY = 'prp_data_v38_final_fixed';
             });
         }
 
+        // In the desktop build the data lives in a standalone database file that the
+        // native shell exposes here; the browser build keeps using IndexedDB.
+        function prpDesktopStore(){
+            var store = (typeof window !== 'undefined') ? window.prpNativeStore : null;
+            return (store && store.isNative) ? store : null;
+        }
+
         async function idbGet(key){
+            var native = prpDesktopStore();
+            if(native) return await native.get(key);
             const db = await idbOpen();
             return new Promise((resolve, reject) => {
                 const tx = db.transaction(IDB_STORE, 'readonly');
@@ -2950,6 +2959,8 @@ var DB_KEY = 'prp_data_v38_final_fixed';
         }
 
         async function idbSet(key, val){
+            var native = prpDesktopStore();
+            if(native) return await native.set(key, val);
             const db = await idbOpen();
             return new Promise((resolve, reject) => {
                 const tx = db.transaction(IDB_STORE, 'readwrite');
